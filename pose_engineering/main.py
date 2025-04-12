@@ -6,7 +6,8 @@ import pandas as pd
 import numpy as np
 from ultralytics import YOLO
 from keypoint.extract import get_keypoint_coordinates, draw_skeleton, display_keypoint_info
-from behave.bend import analyze_frame, draw_behavior_visuals
+from behave.bend import analyze_bends, draw_bend_visuals
+from behave.distance import analyze_dist
 
 # Constants
 KEYPOINTS = ['Head', 'L_shoulder', 'R_shoulder', 'R_elbow', 'R_wrist', 'L_elbow', 'L_wrist']
@@ -38,17 +39,25 @@ def process_video_frame(frame, frame_num, frame_width, frame_height, counters):
         - analysis_results: Arm behavior analysis data
         - updated counters
     """
+    # Let the model process the frame and predict the keypoints
     results = model(frame)
+    
+    # Get keypoint coordinates and bounding box
     keypoint_data, bbox = get_keypoint_coordinates(results, frame_width, frame_height, KEYPOINTS)
-    
+    print(f"Keypoint_data: {keypoint_data}")
     # Analyze arm behavior
-    analysis_results, counters, vis_elements = analyze_frame(keypoint_data, counters)
+    analysis_results, counters, vis_elements = analyze_bends(keypoint_data, counters)
     
-    # Draw all visualizations
+    # Show skeleton connections to the frame
     annotated_frame = draw_skeleton(frame, keypoint_data, bbox, SKELETON_CONNECTIONS)
-    annotated_frame = draw_behavior_visuals(annotated_frame, vis_elements, analysis_results, counters)
-    print(f"drawn behavior visuals function finished")
+    
+    # Add the bend visuals to the frame 
+    annotated_frame = draw_bend_visuals(annotated_frame, vis_elements, analysis_results, counters)
+    
+    # Save the frame state with keypoint info and Bend Visuals
     annotated_frame = display_keypoint_info(annotated_frame, keypoint_data, frame_num)
+    
+    _, _, annotated_frame = analyze_dist(annotated_frame, keypoint_data)
     
     return annotated_frame, keypoint_data, bbox, analysis_results, counters
 

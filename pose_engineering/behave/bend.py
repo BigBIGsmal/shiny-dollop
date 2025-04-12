@@ -1,18 +1,23 @@
-# behavior.py (updated)
-
 import numpy as np
 import cv2
 
 def classify_arm_bend_level(angle):
     """Classify arm bend status based on angle"""
-    if angle > 160: 
+    
+    if angle > 160: # Straight arm 90 to 160 degrees
         return "STRAIGHT", (0, 255, 0)  # Green
-    elif angle > 90: 
+    
+    elif angle > 90: # L Shaped arm 90 to 160 degrees
         return "PARTIALLY BENT", (0, 255, 255)  # Yellow
-    else: 
+    
+    else: # < or > shaped arm; Values less than 90 degrees
         return "FULLY BENT", (0, 0, 255)  # Red
 
 def calculate_angular_displacement(shoulder, elbow, wrist):
+    # This function calculates the angle between the shoulder, elbow, and wrist;
+    # Arc Length With the Radius and Central Angle is used to calculate the angle.
+    # The angle is calculated using the cosine rule.
+    # Elbow is used as the vertex of the angle.
     """Calculate angle between shoulder-elbow-wrist"""
     shoulder = np.array(shoulder)
     elbow = np.array(elbow)
@@ -29,7 +34,8 @@ def calculate_angular_displacement(shoulder, elbow, wrist):
     
     return angle, direction
 
-def analyze_frame(keypoint_data, counters):
+def analyze_bends(keypoint_data, counters):
+    
     """
     Main function to analyze arm behavior for a frame
     Returns:
@@ -51,12 +57,14 @@ def analyze_frame(keypoint_data, counters):
     if not all(kp in kp_dict for kp in required_kps):
         return analysis_results, counters, None
     
-    # Left arm analysis
+    # Left arm Angle Calculation
+    # Refer to calculate_angular_displacement function for angle calculation
     left_angle, left_dir = calculate_angular_displacement(
         kp_dict['L_shoulder'], kp_dict['L_elbow'], kp_dict['L_wrist'])
     left_status, left_color = classify_arm_bend_level(left_angle)
     
-    # Right arm analysis
+    # Right arm Angle Calculation
+    # Refer to calculate_angular_displacement function for angle calculation
     right_angle, right_dir = calculate_angular_displacement(
         kp_dict['R_shoulder'], kp_dict['R_elbow'], kp_dict['R_wrist'])
     right_status, right_color = classify_arm_bend_level(right_angle)
@@ -99,7 +107,7 @@ def analyze_frame(keypoint_data, counters):
     
     return analysis_results, counters, vis_elements
 
-def draw_behavior_visuals(frame, vis_elements, analysis_results, counters):
+def draw_bend_visuals(frame, vis_elements, analysis_results, counters):
     """Draw behavior analysis visuals on the frame"""
     if not vis_elements:
         return frame
