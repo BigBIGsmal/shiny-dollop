@@ -2,8 +2,6 @@ import os
 import cv2
 import pandas as pd
 import numpy as np
-from behave.behavior import arm_analysis, calculate_angular_displacement, classify_arm_bend_level
-
 
 def get_keypoint_coordinates(results, frame_width, frame_height, keypoints):
     """
