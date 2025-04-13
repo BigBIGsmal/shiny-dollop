@@ -14,6 +14,7 @@ def classify_arm_bend_level(angle):
         return "FULLY BENT", (0, 0, 255)  # Red
 
 def calculate_angular_displacement(shoulder, elbow, wrist):
+    print("Calculating angular displacement...")
     # This function calculates the angle between the shoulder, elbow, and wrist;
     # Arc Length With the Radius and Central Angle is used to calculate the angle.
     # The angle is calculated using the cosine rule.
@@ -35,7 +36,7 @@ def calculate_angular_displacement(shoulder, elbow, wrist):
     return angle, direction
 
 def analyze_bends(keypoint_data, counters):
-    
+    print("Analyzing arm bends...")
     """
     Main function to analyze arm behavior for a frame
     Returns:
@@ -108,29 +109,13 @@ def analyze_bends(keypoint_data, counters):
     return analysis_results, counters, vis_elements
 
 def draw_bend_visuals(frame, vis_elements, analysis_results, counters):
+    print("Drawing bend visuals...")
     """Draw behavior analysis visuals on the frame"""
     if not vis_elements:
         return frame
     
     annotated_frame = frame.copy()
 
-    # Access the entire "left" sub-dictionary
-    left_data = analysis_results['left']
-
-    # Access individual values under "left"
-    left_status = analysis_results['left']['status']       # Value: 'STRAIGHT'
-    left_angle = analysis_results['left']['angle']         # Value: np.float32(172.07626)
-    left_direction = analysis_results['left']['direction'] # Value: 'up'
-    left_count = analysis_results['left']['count']   
-    
-    # Access the entire "right" sub-dictionary
-    right_data = analysis_results['right']
-
-    # Access individual values under "right"
-    right_status = analysis_results['right']['status']       # Value: 'PARTIALLY BENT'
-    right_angle = analysis_results['right']['angle']         # Value: np.float32(136.06111)
-    right_direction = analysis_results['right']['direction'] # Value: 'down'
-    right_count = analysis_results['right']['count']   
     # Draw angle arcs
     cv2.ellipse(
         annotated_frame,

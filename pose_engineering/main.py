@@ -9,6 +9,7 @@ from keypoint.extract import get_keypoint_coordinates, draw_skeleton, display_ke
 from behave.bend import analyze_bends, draw_bend_visuals
 from behave.distance import analyze_dist
 from behave.metrics import init_feature_state, calculate_pose_stability, update_temporal_features, draw_features, calculate_distance
+from utilities.csvkit import process_bend_analysis_results, process_dist_analysis_results, write_behavior_feature_analysis_to_csv
 
 
 # Constants
@@ -32,7 +33,7 @@ def init_counters():
         'prev_right_status': None
     }
 
-def process_video_frame(frame, frame_num, frame_width, frame_height, counters, feature_state, delta_time):
+def process_video_frame(frame, frame_num, frame_width, frame_height, counters, feature_state, delta_time, video_name):
     """
     Process a single video frame through the pipeline
     Returns:
@@ -48,8 +49,14 @@ def process_video_frame(frame, frame_num, frame_width, frame_height, counters, f
     # Get keypoint coordinates and bounding box
     keypoint_data, bbox = get_keypoint_coordinates(results, frame_width, frame_height, KEYPOINTS)
     print(f"Keypoint_data: {keypoint_data}")
+    
     # Analyze arm behavior
     analysis_results, counters, vis_elements = analyze_bends(keypoint_data, counters)
+    
+    # Processes the output targets of the bend analysis and prepares it for CSV writing
+    # Target: [left_status, left_angle, left_direction, left_count, right_status, right_angle, right_direction, right_count]
+    bend_data, bend_columns = process_bend_analysis_results(analysis_results)
+    # write_bend_analysis_to_csv(bend_data, column_names, video_name) for tweaking
     
     # Show skeleton connections to the frame
     annotated_frame = draw_skeleton(frame, keypoint_data, bbox, SKELETON_CONNECTIONS)
@@ -60,11 +67,14 @@ def process_video_frame(frame, frame_num, frame_width, frame_height, counters, f
     # Save the frame state with keypoint info and Bend Visuals
     annotated_frame = display_keypoint_info(annotated_frame, keypoint_data, frame_num)
     
-    current_position , acceleration_ave, annotated_frame = analyze_dist(annotated_frame, keypoint_data)
+    current_position , acceleration_ave, annotated_frame, total_distance_data= analyze_dist(annotated_frame, keypoint_data)
+    
+    dist_data, dist_columns = process_dist_analysis_results(total_distance_data)
+    print(f"Total distance is this value {dist_data} END VALUE")    
     
     # print(f" Current Positions {current_positions},acceleration average: {acceleration_ave}, annotated frame: {annotated_frame} \n")
     
-       # Convert keypoint data to dictionary
+    # Convert keypoint data to dictionary
     kp_dict = {name: (x, y) for name, x, y in keypoint_data} if keypoint_data else {}
     
     # Calculate engineered features
@@ -84,7 +94,14 @@ def process_video_frame(frame, frame_num, frame_width, frame_height, counters, f
     # Draw features
     annotated_frame = draw_features(annotated_frame, features)
     
+    print(f"keypoints: {keypoint_data} \
+            Bounding box: {bbox} \
+            Analysis results: {analysis_results} \
+                ")
+    
+    write_behavior_feature_analysis_to_csv(bend_data, dist_data, bend_columns, dist_columns, video_name)
     return annotated_frame, keypoint_data, bbox, analysis_results, counters
+
 
 def extract_frames(input_video, output_folder, fps_target=15):
     """Main video processing function"""
@@ -120,7 +137,7 @@ def extract_frames(input_video, output_folder, fps_target=15):
         if frame_count % int(original_fps / fps_target) == 0:
             # Process frame
             annotated_frame, keypoint_data, bbox, analysis_results, counters = process_video_frame(
-                frame, frame_num, width, height, counters, feature_state, delta_time)
+                frame, frame_num, width, height, counters, feature_state, delta_time, video_name)
             
             # Save frame
             cv2.imwrite(os.path.join(frame_output_dir, f"frame_{frame_num:04d}.jpg"), annotated_frame)
