@@ -157,7 +157,7 @@ def draw_bend_visuals(frame, vis_elements, analysis_results, counters):
     )
     cv2.putText(
         annotated_frame,
-        f"Angle: {analysis_results['left']['angle']:.1f}°",
+        f"Angle: {analysis_results['left']['angle']:.1f} Degrees",
         (text_x, text_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
         vis_elements['left_color'], 1
     )
@@ -177,7 +177,7 @@ def draw_bend_visuals(frame, vis_elements, analysis_results, counters):
     )
     cv2.putText(
         annotated_frame,
-        f"Angle: {analysis_results['right']['angle']:.1f}°",
+        f"Angle: {analysis_results['right']['angle']:.1f} Degrees",
         (text_x, text_y + 120), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
         vis_elements['right_color'], 1
     )

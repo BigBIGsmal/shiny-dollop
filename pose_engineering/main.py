@@ -8,6 +8,8 @@ from ultralytics import YOLO
 from keypoint.extract import get_keypoint_coordinates, draw_skeleton, display_keypoint_info
 from behave.bend import analyze_bends, draw_bend_visuals
 from behave.distance import analyze_dist
+from behave.metrics import init_feature_state, calculate_pose_stability, update_temporal_features, draw_features, calculate_distance
+
 
 # Constants
 KEYPOINTS = ['Head', 'L_shoulder', 'R_shoulder', 'R_elbow', 'R_wrist', 'L_elbow', 'L_wrist']
@@ -16,6 +18,7 @@ SKELETON_CONNECTIONS = [
     ('L_shoulder', 'L_elbow'), ('L_elbow', 'L_wrist'),
     ('R_shoulder', 'R_elbow'), ('R_elbow', 'R_wrist')
 ]
+METRIC_JOINTS = ['L_wrist', 'R_wrist', 'L_elbow', 'R_elbow']
 
 # Initialize model
 model = YOLO(r'C:\Users\rafae\Documents\Projects\thesis\dabest.pt')
@@ -29,7 +32,7 @@ def init_counters():
         'prev_right_status': None
     }
 
-def process_video_frame(frame, frame_num, frame_width, frame_height, counters):
+def process_video_frame(frame, frame_num, frame_width, frame_height, counters, feature_state, delta_time):
     """
     Process a single video frame through the pipeline
     Returns:
@@ -57,7 +60,29 @@ def process_video_frame(frame, frame_num, frame_width, frame_height, counters):
     # Save the frame state with keypoint info and Bend Visuals
     annotated_frame = display_keypoint_info(annotated_frame, keypoint_data, frame_num)
     
-    _, _, annotated_frame = analyze_dist(annotated_frame, keypoint_data)
+    current_position , acceleration_ave, annotated_frame = analyze_dist(annotated_frame, keypoint_data)
+    
+    # print(f" Current Positions {current_positions},acceleration average: {acceleration_ave}, annotated frame: {annotated_frame} \n")
+    
+       # Convert keypoint data to dictionary
+    kp_dict = {name: (x, y) for name, x, y in keypoint_data} if keypoint_data else {}
+    
+    # Calculate engineered features
+    features = {}
+    if all(k in kp_dict for k in KEYPOINTS):
+        # Spatial features
+        features['head_to_l_wrist'] = calculate_distance(kp_dict['Head'], kp_dict['L_wrist'])
+        features['head_to_r_wrist'] = calculate_distance(kp_dict['Head'], kp_dict['R_wrist'])
+        features['wrist_distance'] = calculate_distance(kp_dict['L_wrist'], kp_dict['R_wrist'])
+        features['pose_stability'] = calculate_pose_stability(kp_dict)
+        
+        # Temporal features
+        current_positions = {joint: kp_dict[joint] for joint in METRIC_JOINTS}
+        temporal_features = update_temporal_features(feature_state, current_positions, delta_time)
+        features.update(temporal_features)
+    
+    # Draw features
+    annotated_frame = draw_features(annotated_frame, features)
     
     return annotated_frame, keypoint_data, bbox, analysis_results, counters
 
@@ -88,11 +113,14 @@ def extract_frames(input_video, output_folder, fps_target=15):
         ret, frame = cap.read()
         if not ret:
             break
+        
+        feature_state = init_feature_state()
+        delta_time = 1 / original_fps
 
         if frame_count % int(original_fps / fps_target) == 0:
             # Process frame
             annotated_frame, keypoint_data, bbox, analysis_results, counters = process_video_frame(
-                frame, frame_num, width, height, counters)
+                frame, frame_num, width, height, counters, feature_state, delta_time)
             
             # Save frame
             cv2.imwrite(os.path.join(frame_output_dir, f"frame_{frame_num:04d}.jpg"), annotated_frame)

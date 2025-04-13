@@ -69,10 +69,11 @@ def draw_motion_visualization(frame, current_positions, TRACKED_JOINTS, accelera
     # Display metrics
     # Display metrics - Start lower and add more spacing
     y_offset = 210  # Start below bend analysis text
+    x_offset = 20  # Left margin
     for joint in TRACKED_JOINTS:
         # Distance counter
         cv2.putText(frame, f"{joint} Distance: {state['total_distance'][joint]:.1f} px", 
-                   (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 
+                   (x_offset, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 
                    0.7, (0, 255, 0), 2)
         y_offset += 35  # Increased spacing
         
@@ -80,13 +81,13 @@ def draw_motion_visualization(frame, current_positions, TRACKED_JOINTS, accelera
         pos = current_positions.get(joint)
         if pos:
             coord_text = f"{joint} Position: ({int(pos[0])}, {int(pos[1])})"
-            cv2.putText(frame, coord_text, (10, y_offset),
+            cv2.putText(frame, coord_text, (x_offset, y_offset),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
             y_offset += 30  # Increased spacing
         
         # Average velocity
         cv2.putText(frame, f"{joint} Speed: {avg_velocities[joint]:.1f} px/0.5s", 
-                   (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 
+                   (x_offset, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 
                    0.5, (255,255,0), 1)
         y_offset += 30  # Increased spacing
     
