@@ -9,7 +9,6 @@ state = {
     'prev_positions': {},
     'velocity_history': defaultdict(lambda: deque(maxlen=HALF_SECOND_WINDOW)),
     'frame_count': 0,
-    'csv_data': []
 }
 HALF_SECOND_WINDOW = 15  # Frames in 0.5 seconds at 30fps
 

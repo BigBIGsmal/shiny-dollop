@@ -54,7 +54,7 @@ def analyze_bends(keypoint_data, counters):
     
     kp_dict = {name: (x, y) for name, x, y in keypoint_data}
     required_kps = ['L_shoulder', 'L_elbow', 'L_wrist', 'R_shoulder', 'R_elbow', 'R_wrist']
-    
+
     if not all(kp in kp_dict for kp in required_kps):
         return analysis_results, counters, None
     
