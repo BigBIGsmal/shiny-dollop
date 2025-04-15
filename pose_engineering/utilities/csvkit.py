@@ -1,6 +1,7 @@
 import csv
 import os
 import numpy as np
+from utilities.Phase2_feature_engineering import extract_video_features 
 
 def process_behavior_analysis_results(raw_keypoints, bend_analysis_results, dist_analysis_results, acceleration_ave):
     """Process distance and acceleration metrics for CSV writing"""
@@ -74,3 +75,19 @@ def write_behavior_feature_analysis_to_csv(data, column_names, filename):
             writer.writeheader()  # Write header only once
         
         writer.writerow(data)  # Write combined data
+
+        
+def create_phase2_csv():
+    # Change where you PHASE 1 OUTPUT can be Accessed
+    CSV_FOLDER = r'C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase1_output'  # Update this path
+    
+    # Change where to save PHASE 2 CSV FEATURES
+    OUTPUT_PATH = r"C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase2_output\csv_f_engineering.csv"
+
+
+    output_dir = os.path.dirname(OUTPUT_PATH)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        
+    
+    extract_video_features(CSV_FOLDER, OUTPUT_PATH)

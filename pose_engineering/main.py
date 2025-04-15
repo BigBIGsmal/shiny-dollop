@@ -11,7 +11,7 @@ from behave.distance import analyze_dist
 
 # metric feature analysis is unstable
 # from behave.metrics import init_feature_state, calculate_pose_stability, update_temporal_features, draw_features, calculate_distance
-from utilities.csvkit import process_behavior_analysis_results, write_behavior_feature_analysis_to_csv
+from utilities.csvkit import process_behavior_analysis_results, write_behavior_feature_analysis_to_csv, create_phase2_csv
 
 
 
@@ -118,7 +118,6 @@ def extract_frames(input_video, output_folder, fps_target=15):
 
         if frame_count % int(original_fps / fps_target) == 0:
             # Process frame
-            
             # Removing feature_state for now, since it's not used in the current version
             """annotated_frame, keypoint_data, bbox, analysis_results, counters = process_video_frame(
                 frame, frame_num, width, height, counters, feature_state, delta_time, video_name)"""
@@ -130,7 +129,6 @@ def extract_frames(input_video, output_folder, fps_target=15):
             #kahit ipasa ko nlng dito ung mga need ko ilagay sa frame para sabay sabay sila mag lagay ng drawing sa frame
             # di ko na din need mag lagay ng animations sa frame mismo sa process_video_frame function tsaka sa functions ng behavior mismo
             # kahit dito ko nlng tlaga siya mismo ilagay
-            
             # Save frame
             # cv2.imwrite(os.path.join(frame_output_dir, f"frame_{frame_num:04d}.jpg"), annotated_frame)
             cv2.imshow('Pose Estimation', annotated_frame)
@@ -195,3 +193,4 @@ if __name__ == "__main__":
     input_dir = r"C:\Users\rafae\Documents\Projects\thesis\sample vid\front"
     output_dir = r"C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase1_output"
     process_all_videos(input_dir, output_dir)
+    # create_phase2_csv()
