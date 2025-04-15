@@ -11,8 +11,9 @@ from behave.distance import analyze_dist
 
 # metric feature analysis is unstable
 # from behave.metrics import init_feature_state, calculate_pose_stability, update_temporal_features, draw_features, calculate_distance
-from utilities.csvkit import process_behavior_analysis_results, write_behavior_feature_analysis_to_csv, create_phase2_csv
-
+from utilities.csvkit import process_behavior_analysis_results, write_behavior_feature_analysis_to_csv
+from utilities.Phase2_feature_engineering import phase_2
+from utilities.Phase3_feature_engineering import phase_3
 
 
 # Constants
@@ -177,8 +178,38 @@ def extract_frames(input_video, output_folder, fps_target=15):
 
     # Save CSV
     df = pd.DataFrame(csv_data, columns=columns)
-    df.to_csv(os.path.join(output_folder, f"{video_name}_keypoints.csv"), index=False)
     
+    phase1_output_folder_path = os.path.join(output_folder, f"{video_name}_folder")
+    # Create the directory if it doesn't exist
+    os.makedirs(phase1_output_folder_path, exist_ok=True)
+    phase_1_path_csv_output = os.path.join(phase1_output_folder_path, f"{video_name}_phase_1.csv")
+    df.to_csv(phase_1_path_csv_output, index=False)
+    
+    print(f"CSV saved: {phase_1_path_csv_output}")
+    
+    
+    """
+    This is where the phase 2 and phase 3 will be called
+    passing the csv output folder path of phase 1 as input
+    
+    Current problems: 
+    
+    PermissionError: [Errno 13] Permission denied: 'C:\\Users\\rafae\\Documents\\Projects\\ShinyDollop\\pose_engineering\\data\\phase3_output\\d1_front_111_folder_phase3'
+    
+    """
+    phase_2_output_path = r"C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase2_output"
+    
+    phase_2_output_folder_path= os.path.join(phase_2_output_path, f"{video_name}_folder_phase2")
+    os.makedirs(phase_2_output_folder_path, exist_ok=True)
+    
+    phase_2(phase1_output_folder_path, phase_2_output_folder_path)
+    print(f"Phase 2 CSV saved in : {phase_2_output_folder_path}")
+    
+    phase_3_output_path = r"C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase3_output"
+    phase_3_output_folder_path = os.path.join(phase_3_output_path, f"{video_name}_folder_phase3")
+    os.makedirs(phase_3_output_folder_path, exist_ok=True)
+    phase_3(phase_2_output_folder_path, phase_3_output_folder_path)
+    print(f"Phase 3 CSV saved in : {phase_3_output_folder_path}")
     cap.release()
     cv2.destroyAllWindows()
 
@@ -198,4 +229,3 @@ if __name__ == "__main__":
     input_dir = r"C:\Users\rafae\Documents\Projects\thesis\sample vid\front"
     output_dir = r"C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase1_output"
     process_all_videos(input_dir, output_dir)
-    create_phase2_csv()
