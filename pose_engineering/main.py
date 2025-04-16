@@ -208,7 +208,8 @@ def extract_frames(input_video, output_folder, fps_target=15):
     phase_3_output_path = r"C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase3_output"
     phase_3_output_folder_path = os.path.join(phase_3_output_path, f"{video_name}_folder_phase3")
     os.makedirs(phase_3_output_folder_path, exist_ok=True)
-    phase_3(phase_2_output_folder_path, phase_3_output_folder_path)
+    print(phase_2_output_folder_path, phase_3_output_folder_path)
+    phase_3(phase_2_output_folder_path, phase_3_output_path)
     print(f"Phase 3 CSV saved in : {phase_3_output_folder_path}")
     cap.release()
     cv2.destroyAllWindows()

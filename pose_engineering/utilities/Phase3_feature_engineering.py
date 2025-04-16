@@ -12,6 +12,7 @@ def phase_3(csv_folder, output_path):
     # Get all CSV files
     csv_files = [f for f in os.listdir(csv_folder) if f.endswith('.csv')]
     
+    print(f"\nFound {csv_files} CSV files in {csv_folder}.")
     # Initialize storage
     video_features = []
     
@@ -66,6 +67,8 @@ def phase_3(csv_folder, output_path):
     # Handle missing values
     final_df.fillna(-999, inplace=True)  # XGBoost-friendly missing value handling
     
+    print(f"Tracking output path in phase 3: {output_path} END VALUES")
     # Save output
-    final_df.to_csv(output_path, index=False)
+    final_df.to_csv(f"{output_path}_phase3_.csv", index=False)
+
     print(f"\nSuccessfully processed {len(final_df)} videos. Saved to {output_path}")
