@@ -81,7 +81,7 @@ def process_video_frame(frame, frame_num, frame_width, frame_height, counters, d
                 ")
     all_data, all_columns = process_behavior_analysis_results(keypoint_data, analysis_results, total_distance_data, acceleration_ave)
     write_behavior_feature_analysis_to_csv(all_data, all_columns, video_name)
-    return annotated_frame, keypoint_data, bbox, analysis_results, counters
+    return annotated_frame, keypoint_data, bbox, analysis_results, counters, total_distance_data, acceleration_ave
 
 
 def extract_frames(input_video, output_folder, fps_target=15):
@@ -100,8 +100,10 @@ def extract_frames(input_video, output_folder, fps_target=15):
     csv_data = []
     columns = ['frame_num'] + [f"{kp}_x" for kp in KEYPOINTS] + [f"{kp}_y" for kp in KEYPOINTS] + \
               ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2'] + \
+              ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2'] + \
               ['left_status', 'left_angle', 'left_direction', 'left_count',
-               'right_status', 'right_angle', 'right_direction', 'right_count']
+               'right_status', 'right_angle', 'right_direction', 'right_count', 'left_dist_travel','right_dist_travel','left_velocity','right_velocity']
+              
     
     frame_num = 0
     frame_count = 0
@@ -124,7 +126,7 @@ def extract_frames(input_video, output_folder, fps_target=15):
                 frame, frame_num, width, height, counters, feature_state, delta_time, video_name)"""
                 
                 
-            annotated_frame, keypoint_data, bbox, analysis_results, counters = process_video_frame( frame, frame_num, width, height, counters, delta_time, video_name)
+            annotated_frame, keypoint_data, bbox, analysis_results, counters, dist_data, accel_data  = process_video_frame( frame, frame_num, width, height, counters, delta_time, video_name)
             
             
             #kahit ipasa ko nlng dito ung mga need ko ilagay sa frame para sabay sabay sila mag lagay ng drawing sa frame
@@ -161,7 +163,11 @@ def extract_frames(input_video, output_folder, fps_target=15):
                 analysis_results.get('right', {}).get('status', np.nan),
                 analysis_results.get('right', {}).get('angle', np.nan),
                 analysis_results.get('right', {}).get('direction', np.nan),
-                analysis_results.get('right', {}).get('count', np.nan)
+                analysis_results.get('right', {}).get('count', np.nan),
+                dist_data.get('L_wrist', np.nan),
+                dist_data.get('R_wrist', np.nan),
+                accel_data.get('L_wrist', np.nan),
+                accel_data.get('R_wrist', np.nan),
             ])
             
             csv_data.append(frame_info)
