@@ -2,7 +2,7 @@ import csv
 import os
 import numpy as np
 
-def process_behavior_analysis_results(raw_keypoints, bend_analysis_results, dist_analysis_results, acceleration_ave):
+def process_behavior_analysis_results(frame_num ,raw_keypoints, bend_analysis_results, dist_analysis_results, acceleration_ave):
     """Process distance and acceleration metrics for CSV writing"""
     
     # Convert raw keypoints list to dictionary {joint: (x, y)}
@@ -13,12 +13,9 @@ def process_behavior_analysis_results(raw_keypoints, bend_analysis_results, dist
         coords = keypoint_dict.get(joint, (np.nan, np.nan))
         return coords[index] if len(coords) > index else np.nan
     
+    print(f"Frame {frame_num}: NUM NUM NUM")
     processed = {
-        'left_wrist_distance': dist_analysis_results.get('L_wrist', np.nan),
-        'right_wrist_distance': dist_analysis_results.get('R_wrist', np.nan),
-        'left_wrist_acceleration': acceleration_ave.get('L_wrist', np.nan),
-        'right_wrist_acceleration': acceleration_ave.get('R_wrist', np.nan),
-        
+        "frame_num": str(frame_num),
         # Keypoint coordinates with safe access
         'left_wrist_x': get_coord('L_wrist', 0),
         'left_wrist_y': get_coord('L_wrist', 1),
@@ -34,6 +31,11 @@ def process_behavior_analysis_results(raw_keypoints, bend_analysis_results, dist
         'right_shoulder_y': get_coord('R_shoulder', 1),
         'head_x': get_coord('Head', 0),
         'head_y': get_coord('Head', 1),
+        
+        'left_wrist_distance': dist_analysis_results.get('L_wrist', np.nan),
+        'right_wrist_distance': dist_analysis_results.get('R_wrist', np.nan),
+        'left_wrist_acceleration': acceleration_ave.get('L_wrist', np.nan),
+        'right_wrist_acceleration': acceleration_ave.get('R_wrist', np.nan),
     }
     
     # Add bend analysis results (may contain strings)

@@ -79,7 +79,7 @@ def process_video_frame(frame, frame_num, frame_width, frame_height, counters, d
             Bounding box: {bbox} \
             Analysis results: {analysis_results} \
                 ")
-    all_data, all_columns = process_behavior_analysis_results(keypoint_data, analysis_results, total_distance_data, acceleration_ave)
+    all_data, all_columns = process_behavior_analysis_results(frame_num, keypoint_data, analysis_results, total_distance_data, acceleration_ave)
     write_behavior_feature_analysis_to_csv(all_data, all_columns, video_name)
     return annotated_frame, keypoint_data, bbox, analysis_results, counters, total_distance_data, acceleration_ave
 
@@ -128,7 +128,8 @@ def extract_frames(input_video, output_folder, fps_target=15):
                 
             annotated_frame, keypoint_data, bbox, analysis_results, counters, dist_data, accel_data  = process_video_frame( frame, frame_num, width, height, counters, delta_time, video_name)
             
-            
+            print(f"dist_data: {dist_data} \n \
+            accel_data: {accel_data} END OF VALUES")
             #kahit ipasa ko nlng dito ung mga need ko ilagay sa frame para sabay sabay sila mag lagay ng drawing sa frame
             # di ko na din need mag lagay ng animations sa frame mismo sa process_video_frame function tsaka sa functions ng behavior mismo
             # kahit dito ko nlng tlaga siya mismo ilagay
