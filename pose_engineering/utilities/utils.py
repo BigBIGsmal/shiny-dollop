@@ -157,8 +157,10 @@ def merge_annotated_frames(output_a, output_a2):
     process_split(output_a2, next_idx)
     
     print(f"Merged frames saved to: {merged_dir}")
-    clear_directory_contents(output_a)
-    clear_directory_contents(output_a2)
+    split_1 = r"./data/temp/split_1/annotated"
+    split_2 = r"./data/temp/split_2/annotated"
+    clear_directory_contents(split_1)
+    clear_directory_contents(split_2)
     
     return merged_dir
 

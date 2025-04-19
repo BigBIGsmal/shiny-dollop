@@ -1,0 +1,3 @@
+This is where all the raw keypoints are saved, and frame csv values
+
+values such as, mean, median, etc...

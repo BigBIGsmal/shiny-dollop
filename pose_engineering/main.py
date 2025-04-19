@@ -4,9 +4,12 @@ import glob
 from utilities.utils import split_vid, save_frames, merge_csv, merge_annotated_frames
 import cv2
 from data_phasing.phasing.phase_0 import phase_0
+from data_phasing.phasing.phase_1 import phase_1
+from data_phasing.phasing.detection import detect
 from threading import Thread
-
 from ultralytics import YOLO
+import joblib
+
 
  # Change if needed
 
@@ -29,10 +32,21 @@ def get_video_files(directory):
 
 def run_phase_0(input_dir, results):
     # Each thread gets its own model instance
-    local_model = YOLO(r'C:\Users\rafae\Documents\Projects\thesis\dabest.pt')
+    local_model = YOLO(r'dabest.pt')
     annotated_path, csv_path = phase_0(input_dir, local_model)
     results.extend([annotated_path, csv_path])
                 
+def run_phase_2(input_dir):
+    model_path = r'distress_detection_model_full_FEATURE_SELECTED_V2.pkl'
+    
+    artifacts = joblib.load(model_path)
+    
+    model = artifacts['model']
+    top_features = artifacts['top_features']
+    feature_medians = artifacts['feature_medians']
+    
+    detect(input_dir, model, top_features, feature_medians)
+    
 def main():
     st.title("Video Processing App")
     
@@ -61,6 +75,7 @@ def main():
     
     # Display the selected video
     if selected_video:
+        
         print(f"Selected video: {selected_video}")
         video_path = os.path.join(video_dir, selected_video)
         
@@ -70,6 +85,7 @@ def main():
         # Add a button to process the video
         if st.button("Process Video"):
             st.info(f"Processing video: {video_path}")
+            
             split_1, split_2 = split_vid(video_path)
             print(f"Split 1: {split_1} frames END VALUE")
             
@@ -115,9 +131,18 @@ def main():
             print(f"CSV files merged successfully: {out_b} + {output_b2}")
             print(f"{phase_0_csv} frame_IDs refractored")
             
+            phase_1_csv = phase_1(phase_0_csv)
+            print(f"Phase 1 CSV file saved to: {phase_1_csv}")
+            
+            phase_1_csv_debugging = r"./data/output/csv_output/phase1_output"
+            
+            detected_csv= run_phase_2(phase_1_csv_debugging)
+            print(f"Detection CSV file saved to: {detected_csv}")
+            
             phase_0_frames = merge_annotated_frames(out_a, output_a2)
             print(f"Annotated frames merged successfully: {out_a} + {output_a2}")
             print(f"Saved to : {phase_0_frames} End of phase 0")
+            
             # Here you would add your video processing code
             # For example:
             # process_video(video_path)
