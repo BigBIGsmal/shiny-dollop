@@ -3,9 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-./pose_engineering/dabest.pt
-./pose_engineering/distress_detection_model_full_FEATURE_SELECTED_V2.pkl
-./pose_engineering/data/input/
+/pose_engineering/dabest.pt
+/pose_engineering/distress_detection_model_full_FEATURE_SELECTED_V2.pkl
+/pose_engineering/data/input/
 
 # C extensions
 *.so
