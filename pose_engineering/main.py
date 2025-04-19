@@ -1,204 +1,127 @@
-# main.py (updated)
-
+import streamlit as st
 import os
+import glob
+from utilities.utils import split_vid, save_frames, merge_csv, merge_annotated_frames
 import cv2
-import pandas as pd
-import numpy as np
+from data_phasing.phasing.phase_0 import phase_0
+from threading import Thread
+
 from ultralytics import YOLO
-from keypoint.extract import get_keypoint_coordinates, draw_skeleton, display_keypoint_info
-from behave.bend import analyze_bends, draw_bend_visuals
-from behave.distance import analyze_dist
 
-# metric feature analysis is unstable
-# from behave.metrics import init_feature_state, calculate_pose_stability, update_temporal_features, draw_features, calculate_distance
-from utilities.csvkit import process_behavior_analysis_results, write_behavior_feature_analysis_to_csv
+ # Change if needed
 
 
-
-# Constants
-KEYPOINTS = ['Head', 'L_shoulder', 'R_shoulder', 'R_elbow', 'R_wrist', 'L_elbow', 'L_wrist']
-SKELETON_CONNECTIONS = [
-    ('Head', 'L_shoulder'), ('Head', 'R_shoulder'),
-    ('L_shoulder', 'L_elbow'), ('L_elbow', 'L_wrist'),
-    ('R_shoulder', 'R_elbow'), ('R_elbow', 'R_wrist')
-]
-METRIC_JOINTS = ['L_wrist', 'R_wrist', 'L_elbow', 'R_elbow']
-
-# Initialize model
-model = YOLO(r'C:\Users\rafae\Documents\Projects\thesis\dabest.pt')
-
-def init_counters():
-    """Initialize bend tracking counters"""
-    return {
-        'left_count': 0,
-        'right_count': 0,
-        'prev_left_status': None,
-        'prev_right_status': None
-    }
-
-"""def process_video_frame(frame, frame_num, frame_width, frame_height, counters, feature_state, delta_time, video_name):"""
-def process_video_frame(frame, frame_num, frame_width, frame_height, counters, delta_time, video_name):
-    """
-    Process a single video frame through the pipeline
-    Returns:
-        - annotated_frame: Frame with visualizations
-        - keypoint_data: List of (keypoint_name, x, y) tuples
-        - bbox: Bounding box coordinates [x1, y1, x2, y2]
-        - analysis_results: Arm behavior analysis data
-        - updated counters
-    """
-    # Let the model process the frame and predict the keypoints
-    results = model(frame)
+def get_video_files(directory):
+    """Get all video files from the specified directory."""
+    # Common video file extensions
+    video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv']
     
-    # Get keypoint coordinates and bounding box
-    keypoint_data, bbox = get_keypoint_coordinates(results, frame_width, frame_height, KEYPOINTS)
-    print(f"Keypoint_data: {keypoint_data} END VALUES")
+    video_files = []
+    for ext in video_extensions:
+        video_files.extend(glob.glob(os.path.join(directory, f'*{ext}')))
     
-    # Analyze arm behavior
-    analysis_results, counters, vis_elements = analyze_bends(keypoint_data, counters)
-    
-    print(f"\nBend Values Results: {analysis_results} END VALUES")
-    # Processes the output targets of the bend analysis and prepares it for CSV writing
-    # Target: [left_status, left_angle, left_direction, left_count, right_status, right_angle, right_direction, right_count]
+    print(f"Found {video_files} video files in {directory}")
+    # Return just the filenames, not the full paths
+    return [os.path.basename(file) for file in video_files]
 
-    # write_bend_analysis_to_csv(bend_data, column_names, video_name) for tweaking
-    
-    # Show skeleton connections to the frame
-    annotated_frame = draw_skeleton(frame, keypoint_data, bbox, SKELETON_CONNECTIONS)
-    
-    # Add the bend visuals to the frame 
-    annotated_frame = draw_bend_visuals(annotated_frame, vis_elements, analysis_results, counters)
-    
-    # Save the frame state with keypoint info and Bend Visuals
-    # ang need ko ireturn is ung mismong cv2 elements, hindi ung frame na may annotation
-    annotated_frame = display_keypoint_info(annotated_frame, keypoint_data, frame_num)
-    
-    current_position , acceleration_ave, annotated_frame, total_distance_data= analyze_dist(annotated_frame, keypoint_data)
-    
-    print(f"keypoints: {keypoint_data} \
-            Bounding box: {bbox} \
-            Analysis results: {analysis_results} \
-                ")
-    all_data, all_columns = process_behavior_analysis_results(frame_num, keypoint_data, analysis_results, total_distance_data, acceleration_ave)
-    write_behavior_feature_analysis_to_csv(all_data, all_columns, video_name)
-    return annotated_frame, keypoint_data, bbox, analysis_results, counters, total_distance_data, acceleration_ave
+            # Create thread-safe processing with separate models
 
 
-def extract_frames(input_video, output_folder, fps_target=15):
-    """Main video processing function"""
-    cap = cv2.VideoCapture(input_video)
-    original_fps = cap.get(cv2.CAP_PROP_FPS)
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    
-    # Setup output
-    video_name = os.path.splitext(os.path.basename(input_video))[0]
-    # frame_output_dir = os.path.join(output_folder, f"{video_name}_frames")
-    # os.makedirs(frame_output_dir, exist_ok=True)
-    
-    # CSV setup - now includes behavior data
-    csv_data = []
-    columns = ['frame_num'] + [f"{kp}_x" for kp in KEYPOINTS] + [f"{kp}_y" for kp in KEYPOINTS] + \
-              ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2'] + \
-              ['bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2'] + \
-              ['left_status', 'left_angle', 'left_direction', 'left_count',
-               'right_status', 'right_angle', 'right_direction', 'right_count', 'left_dist_travel','right_dist_travel','left_velocity','right_velocity']
-              
-    
-    frame_num = 0
-    frame_count = 0
-    counters = init_counters()
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        # feature state is for metrics analysis, not used in this version
-        # feature_state = init_feature_state()
-        delta_time = 1 / original_fps
-
-        if frame_count % int(original_fps / fps_target) == 0:
-            # Process frame
-            
-            # Removing feature_state for now, since it's not used in the current version
-            """annotated_frame, keypoint_data, bbox, analysis_results, counters = process_video_frame(
-                frame, frame_num, width, height, counters, feature_state, delta_time, video_name)"""
+def run_phase_0(input_dir, results):
+    # Each thread gets its own model instance
+    local_model = YOLO(r'C:\Users\rafae\Documents\Projects\thesis\dabest.pt')
+    annotated_path, csv_path = phase_0(input_dir, local_model)
+    results.extend([annotated_path, csv_path])
                 
-                
-            annotated_frame, keypoint_data, bbox, analysis_results, counters, dist_data, accel_data  = process_video_frame( frame, frame_num, width, height, counters, delta_time, video_name)
-            
-            print(f"dist_data: {dist_data} \n \
-            accel_data: {accel_data} END OF VALUES")
-            #kahit ipasa ko nlng dito ung mga need ko ilagay sa frame para sabay sabay sila mag lagay ng drawing sa frame
-            # di ko na din need mag lagay ng animations sa frame mismo sa process_video_frame function tsaka sa functions ng behavior mismo
-            # kahit dito ko nlng tlaga siya mismo ilagay
-            
-            # Save frame
-            # cv2.imwrite(os.path.join(frame_output_dir, f"frame_{frame_num:04d}.jpg"), annotated_frame)
-            cv2.imshow('Pose Estimation', annotated_frame)
-            
-            # Store data for CSV
-            frame_info = [frame_num]
-            
-            # Keypoint coordinates
-            if keypoint_data:
-                kp_dict = {k: (x, y) for k, x, y in keypoint_data}
-                for kp in KEYPOINTS:
-                    if kp in kp_dict:
-                        frame_info.extend(kp_dict[kp])
-                    else:
-                        frame_info.extend([np.nan, np.nan])
-            else:
-                frame_info.extend([np.nan] * len(KEYPOINTS) * 2)
-            
-            # Bounding box
-            frame_info.extend(bbox if len(bbox) == 4 else [np.nan]*4)
-            
-            # Behavior analysis data
-            frame_info.extend([
-                analysis_results.get('left', {}).get('status', np.nan),
-                analysis_results.get('left', {}).get('angle', np.nan),
-                analysis_results.get('left', {}).get('direction', np.nan),
-                analysis_results.get('left', {}).get('count', np.nan),
-                analysis_results.get('right', {}).get('status', np.nan),
-                analysis_results.get('right', {}).get('angle', np.nan),
-                analysis_results.get('right', {}).get('direction', np.nan),
-                analysis_results.get('right', {}).get('count', np.nan),
-                dist_data.get('L_wrist', np.nan),
-                dist_data.get('R_wrist', np.nan),
-                accel_data.get('L_wrist', np.nan),
-                accel_data.get('R_wrist', np.nan),
-            ])
-            
-            csv_data.append(frame_info)
-            frame_num += 1
-            
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-        frame_count += 1
-
-    # Save CSV
-    df = pd.DataFrame(csv_data, columns=columns)
-    df.to_csv(os.path.join(output_folder, f"{video_name}_keypoints.csv"), index=False)
+def main():
+    st.title("Video Processing App")
     
-    cap.release()
-    cv2.destroyAllWindows()
+    # Set the directory path
+    video_dir = r"./data/input"
+    
+    # Check if directory exists
+    if not os.path.exists(video_dir):
+        st.error(f"Directory not found: {video_dir}")
+        st.info("Please make sure the directory exists and contains video files.")
+        return
+    
+    print(f"Directory exists: {video_dir}")
+    # Get video files
+    video_files = get_video_files(video_dir)
+    
+    if not video_files:
+        st.warning(f"No video files found in {video_dir}")
+        return
+    
+    # Create a dropdown to select a video
+    selected_video = st.selectbox(
+        "Select a video to process:",
+        options=video_files
+    )
+    
+    # Display the selected video
+    if selected_video:
+        print(f"Selected video: {selected_video}")
+        video_path = os.path.join(video_dir, selected_video)
+        
+        print(f"Video path: {video_path}")
+        st.video(video_path)
+        
+        # Add a button to process the video
+        if st.button("Process Video"):
+            st.info(f"Processing video: {video_path}")
+            split_1, split_2 = split_vid(video_path)
+            print(f"Split 1: {split_1} frames END VALUE")
+            
+            temp_dir = r"./data/temp"
+            split_1_dir = os.path.join(temp_dir, "split_1/unannotated")
+            split_2_dir = os.path.join(temp_dir, "split_2/unannotated")
 
-def process_all_videos(input_folder, output_folder):
-    """Batch process all videos in a folder"""
-    for filename in os.listdir(input_folder):
-        if filename.endswith(".mp4"):
-            print(f"Processing {filename}...")
-            extract_frames(
-                os.path.join(input_folder, filename),
-                output_folder
-            )
-            print(f"Completed {filename}")
+            # Create directories if they don't exist
+            os.makedirs(split_1_dir, exist_ok=True)
+            os.makedirs(split_2_dir, exist_ok=True)
+            
+            save_frames(split_1, split_1_dir)
+            
+            save_frames(split_2, split_2_dir)
+            
+            """ 
+            We are replacing the unannotated frames with the annotated frames
+            in the temporary folder (temp).
+            """
+            # Create containers for thread results
+            results1, results2 = [], []
+                        # Create and start threads
+            t1 = Thread(target=run_phase_0, args=(split_1_dir, results1))
+            t2 = Thread(target=run_phase_0, args=(split_2_dir, results2))
+            
+            t1.start()
+            t2.start()
+            
+            # Wait for threads to complete
+            t1.join()
+            t2.join()
+            
+            # Unpack results
+            out_a, out_b = results1
+            output_a2, output_b2 = results2
+            print(f"FIRST THREAD Annotated frames saved to: {out_a}")
+            print(f"FIRST THREAD CSV file saved to: {out_b}")
+            
+            print(f"SECOND THREAD Annotated frames saved to: {output_a2}")
+            print(f"SECOND THREAD CSV file saved to: {output_b2}")
+            
+            phase_0_csv = merge_csv(out_b, output_b2)
+            print(f"CSV files merged successfully: {out_b} + {output_b2}")
+            print(f"{phase_0_csv} frame_IDs refractored")
+            
+            phase_0_frames = merge_annotated_frames(out_a, output_a2)
+            print(f"Annotated frames merged successfully: {out_a} + {output_a2}")
+            print(f"Saved to : {phase_0_frames} End of phase 0")
+            # Here you would add your video processing code
+            # For example:
+            # process_video(video_path)
+            st.success("Video processing complete!")
 
-# Example usage
 if __name__ == "__main__":
-    input_dir = r"C:\Users\rafae\Documents\Projects\thesis\sample vid\front"
-    output_dir = r"C:\Users\rafae\Documents\Projects\ShinyDollop\pose_engineering\data\phase1_output"
-    process_all_videos(input_dir, output_dir)
+    main()
