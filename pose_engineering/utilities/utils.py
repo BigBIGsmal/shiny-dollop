@@ -5,6 +5,7 @@ import pandas as pd
 import re
 import math
 
+
 def clear_temp_dir(temp_dir):
     """Clears the temporary directory."""
     if os.path.exists(temp_dir):
@@ -74,7 +75,6 @@ def split_vid(selected_vid):
     
     print(f"Split successful: {len(split_1)} + {len(split_2)} = {len(split_1)+len(split_2)} frames")
     return split_1, split_2
-
 # Add this after processing in main.py
 def clear_directory_contents(directory):
     """Remove all files and subdirectories within a directory, but keep the directory itself"""
@@ -165,7 +165,6 @@ def merge_annotated_frames(output_a, output_a2):
     
     return merged_dir
 
-
 def split_csv_phase1():
     csv_path = r"./data/output/csv_output/phase1_output"
     split_output = r"./data/temp/phase_1_splits"
@@ -203,6 +202,73 @@ def split_csv_phase1():
 
     
     return split_output
+
+def create_video_from_frames():
+    video_path = r"./data/output/video_output"
+    labels_path = r"./data/output/csv_output/phase2_output/detect_results.csv"
+    frames_path = r"./data/output/frame_output"
+    
+    # Create output directory
+    os.makedirs(video_path, exist_ok=True)
+    
+    # Load labels data
+    labels_df = pd.read_csv(labels_path)
+    
+    # Prepare frame lists
+    frame_details = []
+    
+    # Process each row in labels CSV
+    for _, row in labels_df.iterrows():
+        frames = list(map(int, row['frame_ids'].split(',')))
+        for frame_id in frames:
+            frame_details.append({
+                'frame_id': frame_id,
+                'prediction': row['distress_prediction'],
+                'probability': row['distress_probability']
+            })
+    
+    # Sort frames by ID
+    frame_details.sort(key=lambda x: x['frame_id'])
+    
+    # Initialize video writers
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = None
+    
+    # Get frame dimensions from first frame
+    sample_frame = cv2.imread(os.path.join(frames_path, f"frame_{frame_details[0]['frame_id']}.jpg"))
+    height, width, _ = sample_frame.shape
+    
+    # Create writers
+    fps = 30  # Assuming original video FPS
+    video_path = os.path.join(video_path, "vid_output.mp4")
+    
+    video_writer = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
+    
+    # Process frames
+    for detail in frame_details:
+        frame_file = os.path.join(frames_path, f"frame_{detail['frame_id']}.jpg")
+        if not os.path.exists(frame_file):
+            continue
+            
+        frame = cv2.imread(frame_file)
+        
+        # Add annotation
+        label = "DISTRESSED" if detail['prediction'] == 1 else "NORMAL"
+        color = (0, 0, 255) if detail['prediction'] == 1 else (0, 255, 0)
+        
+        cv2.putText(frame, label, (50, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        cv2.putText(frame, f"Prob: {detail['probability']:.2f}", (50, 100),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+        
+
+        video_writer.write(frame)
+    
+    # Release resources
+    video_writer.release()
+    
+    print(f"Videos created at: {video_path}")
+    return video_path
 
 def assign_frame_id(csv_file):
     """Reassigns sequential frame numbers starting from 0 in the first column of the CSV."""

@@ -117,7 +117,7 @@ def detect(input_csv_folder, model, top_features, feature_medians):
                 'video_id': features['video_id'],
                 'distress_prediction': pred,
                 'distress_probability': proba,
-                'frame_id': frame_ids  # Use the separated frame IDs
+                'frame_ids': frame_ids  # Use the separated frame IDs
             })
             
         except Exception as e:

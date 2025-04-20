@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import glob
-from utilities.utils import split_vid, save_frames, merge_csv, merge_annotated_frames, split_csv_phase1, clear_directory_contents
+from utilities.utils import split_vid, save_frames, merge_csv, merge_annotated_frames, split_csv_phase1, clear_directory_contents, create_video_from_frames
 import cv2
 from data_phasing.phasing.phase_0 import phase_0
 from data_phasing.phasing.phase_1 import phase_1
@@ -94,69 +94,71 @@ def main():
         
         # Add a button to process the video
         if st.button("Process Video"):
-            split_output = r"./data/temp/phase_1_splits"
-            clear_directory_contents(split_output)
-            st.info(f"Processing video: {video_path}")
+            # split_output = r"./data/temp/phase_1_splits"
+            # frame_output = r"./data/output/frame_output"
+            # clear_directory_contents(frame_output)
+            # clear_directory_contents(split_output)
+            # st.info(f"Processing video: {video_path}")
             
-            split_1, split_2 = split_vid(video_path)
-            print(f"Split 1: {split_1} frames END VALUE")
+            # split_1, split_2 = split_vid(video_path)
+            # print(f"Split 1: {split_1} frames END VALUE")
             
-            temp_dir = r"./data/temp"
-            split_1_dir = os.path.join(temp_dir, "split_1/unannotated")
-            split_2_dir = os.path.join(temp_dir, "split_2/unannotated")
+            # temp_dir = r"./data/temp"
+            # split_1_dir = os.path.join(temp_dir, "split_1/unannotated")
+            # split_2_dir = os.path.join(temp_dir, "split_2/unannotated")
 
-            # Create directories if they don't exist
-            os.makedirs(split_1_dir, exist_ok=True)
-            os.makedirs(split_2_dir, exist_ok=True)
+            # # Create directories if they don't exist
+            # os.makedirs(split_1_dir, exist_ok=True)
+            # os.makedirs(split_2_dir, exist_ok=True)
             
-            save_frames(split_1, split_1_dir)
+            # save_frames(split_1, split_1_dir)
             
-            save_frames(split_2, split_2_dir)
+            # save_frames(split_2, split_2_dir)
             
-            """ 
-            We are replacing the unannotated frames with the annotated frames
-            in the temporary folder (temp).
-            """
-            # Create containers for thread results
-            results1, results2 = [], []
-                        # Create and start threads
-            t1 = Thread(target=run_phase_0, args=(split_1_dir, results1))
-            t2 = Thread(target=run_phase_0, args=(split_2_dir, results2))
+            # """ 
+            # We are replacing the unannotated frames with the annotated frames
+            # in the temporary folder (temp).
+            # """
+            # # Create containers for thread results
+            # results1, results2 = [], []
+            #             # Create and start threads
+            # t1 = Thread(target=run_phase_0, args=(split_1_dir, results1))
+            # t2 = Thread(target=run_phase_0, args=(split_2_dir, results2))
             
-            t1.start()
-            t2.start()
+            # t1.start()
+            # t2.start()
             
-            # Wait for threads to complete
-            t1.join()
-            t2.join()
+            # # Wait for threads to complete
+            # t1.join()
+            # t2.join()
             
-            # Unpack results
-            out_a, out_b = results1
-            output_a2, output_b2 = results2
-            print(f"FIRST THREAD Annotated frames saved to: {out_a}")
-            print(f"FIRST THREAD CSV file saved to: {out_b}")
+            # # Unpack results
+            # out_a, out_b = results1
+            # output_a2, output_b2 = results2
+            # print(f"FIRST THREAD Annotated frames saved to: {out_a}")
+            # print(f"FIRST THREAD CSV file saved to: {out_b}")
             
-            print(f"SECOND THREAD Annotated frames saved to: {output_a2}")
-            print(f"SECOND THREAD CSV file saved to: {output_b2}")
+            # print(f"SECOND THREAD Annotated frames saved to: {output_a2}")
+            # print(f"SECOND THREAD CSV file saved to: {output_b2}")
             
-            phase_0_csv = merge_csv(out_b, output_b2)
-            print(f"CSV files merged successfully: {out_b} + {output_b2}")
-            print(f"{phase_0_csv} frame_IDs refractored")
+            # phase_0_csv = merge_csv(out_b, output_b2)
+            # print(f"CSV files merged successfully: {out_b} + {output_b2}")
+            # print(f"{phase_0_csv} frame_IDs refractored")
             
-            phase_1_csv = phase_1(phase_0_csv)
-            print(f"Phase 1 CSV file saved to: {phase_1_csv}")
+            # phase_1_csv = phase_1(phase_0_csv)
+            # print(f"Phase 1 CSV file saved to: {phase_1_csv}")
             
-            split = split_csv_phase1()
+            # split = split_csv_phase1()
             
-            print(f"Split CSV files saved to: {split}")
-            detected_csv= run_phase_2(split)
-            print(f"Detection CSV file saved to: {detected_csv}")
+            # print(f"Split CSV files saved to: {split}")
+            # detected_csv= run_phase_2(split)
+            # print(f"Detection CSV file saved to: {detected_csv}")
             
-            phase_0_frames = merge_annotated_frames(out_a, output_a2)
-            print(f"Annotated frames merged successfully: {out_a} + {output_a2}")
-            print(f"Saved to : {phase_0_frames} End of phase 0")
+            # phase_0_frames = merge_annotated_frames(out_a, output_a2)
+            # print(f"Annotated frames merged successfully: {out_a} + {output_a2}")
+            # print(f"Saved to : {phase_0_frames} End of phase 0")
             
-            
+            create_video_from_frames()
             # Here you would add your video processing code
             # For example:
             # process_video(video_path)
