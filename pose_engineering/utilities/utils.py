@@ -3,6 +3,7 @@ import os
 import shutil
 import pandas as pd
 import re
+import math
 
 def clear_temp_dir(temp_dir):
     """Clears the temporary directory."""
@@ -123,9 +124,9 @@ def merge_annotated_frames(output_a, output_a2):
     """
     Merges two frame directories while maintaining original split order and
     renumbers frames sequentially from 0. Returns path to merged directory.
-    """
+    """ 
     merged_dir = r"./data/output/frame_output"
-
+    
     def process_split(split_path, start_idx):
         """Process a single split directory and return next available index"""
         # Get directory from file path
@@ -164,6 +165,44 @@ def merge_annotated_frames(output_a, output_a2):
     
     return merged_dir
 
+
+def split_csv_phase1():
+    csv_path = r"./data/output/csv_output/phase1_output"
+    split_output = r"./data/temp/phase_1_splits"
+    os.makedirs(split_output, exist_ok=True)
+    
+    # Get all CSV files in phase1_output
+    csv_files = [f for f in os.listdir(csv_path) if f.endswith('.csv')]
+    
+    for csv_file in csv_files:
+        # Read original CSV
+        full_path = os.path.join(csv_path, csv_file)
+        df = pd.read_csv(full_path)
+        
+        # Calculate split parameters (8 seconds = 240 frames @30fps)
+        total_frames = len(df)
+        frames_per_split = 70
+        num_splits = math.ceil(total_frames / frames_per_split)
+        
+        # Split the DataFrame
+        splits = []
+        for i in range(num_splits):
+            start_idx = i * frames_per_split
+            end_idx = (i+1) * frames_per_split
+            split_df = df.iloc[start_idx:end_idx]
+            splits.append(split_df)
+        
+        # Save splits
+        split_files = []
+        for i, split_df in enumerate(splits, 1):
+            split_name = f"{os.path.splitext(csv_file)[0]}_split_{i}.csv"
+            split_path = os.path.join(split_output, split_name)
+            split_df.to_csv(split_path, index=False)
+            split_files.append(split_path)
+        
+
+    
+    return split_output
 
 def assign_frame_id(csv_file):
     """Reassigns sequential frame numbers starting from 0 in the first column of the CSV."""

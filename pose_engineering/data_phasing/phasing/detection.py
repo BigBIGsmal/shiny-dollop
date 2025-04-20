@@ -9,10 +9,11 @@ def detect(input_csv_folder, model, top_features, feature_medians):
     def aggregate_features(csv_path, csv_file):
         data = pd.read_csv(csv_path)
         
-        aggregated_features = {}
-        
-        # Include the filename as video_id
-        aggregated_features['video_id'] = csv_file
+        aggregated_features = {
+            'video_id': csv_file,
+            # Get first column regardless of name
+            'frame_ids': data.iloc[:, 0].astype(str).str.cat(sep=',')
+        }
         
         # Arm Bend Status
         aggregated_features['left_arm_bent_count'] = (data['Left_arm_status'] == 'BENT').sum()
@@ -91,40 +92,44 @@ def detect(input_csv_folder, model, top_features, feature_medians):
     predictions = []
     for csv_file in tqdm(csv_files, desc="Processing files"):
         try:
-            # Aggregate features
-            features = aggregate_features(os.path.join(input_csv_folder, csv_file), csv_file)
+            # Get features and frame IDs separately
+            features = aggregate_features(
+                os.path.join(input_csv_folder, csv_file), 
+                csv_file
+            )
             
-            # Create DataFrame for prediction
-            video_features = pd.DataFrame([features])
+            # Split features from frame IDs
+            frame_ids = features.pop('frame_ids')  # Remove from features dict
+            feature_df = pd.DataFrame([features])
             
-            # Preprocess data
-            video_features = video_features.replace(-999, np.nan)
-            for col in video_features.columns:
+            # Preprocess only numerical features
+            feature_df = feature_df.replace(-999, np.nan)
+            for col in feature_df.columns:
                 if col != 'video_id':
-                    video_features[col] = video_features[col].fillna(feature_medians[col])
-            
-            # Select relevant features
-            X_pred = video_features[top_features]
+                    feature_df[col] = feature_df[col].fillna(feature_medians[col])
             
             # Make prediction
+            X_pred = feature_df[top_features]
             pred = model.predict(X_pred)[0]
             proba = model.predict_proba(X_pred)[0][1]
             
             predictions.append({
                 'video_id': features['video_id'],
                 'distress_prediction': pred,
-                'distress_probability': proba
+                'distress_probability': proba,
+                'frame_id': frame_ids  # Use the separated frame IDs
             })
             
         except Exception as e:
             print(f"\nError processing {csv_file}: {str(e)}")
             continue
 
+
     # Save results
     output_folder = r"./data/output/csv_output/phase2_output"
     os.makedirs(output_folder, exist_ok=True)
     result_df = pd.DataFrame(predictions)
-    result_path = os.path.join(output_folder, 'testset_Predict.csv')
+    result_path = os.path.join(output_folder, 'detect_results.csv')
     result_df.to_csv(result_path, index=False)
     
     print(f"\nPredictions complete! Results saved to {result_path}")

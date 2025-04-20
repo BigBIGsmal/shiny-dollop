@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import glob
-from utilities.utils import split_vid, save_frames, merge_csv, merge_annotated_frames
+from utilities.utils import split_vid, save_frames, merge_csv, merge_annotated_frames, split_csv_phase1, clear_directory_contents
 import cv2
 from data_phasing.phasing.phase_0 import phase_0
 from data_phasing.phasing.phase_1 import phase_1
@@ -47,6 +47,16 @@ def run_phase_2(input_dir):
     
     detect(input_dir, model, top_features, feature_medians)
     
+        #     # Process splits
+        # results = []
+        # for split_file in split_files:
+        #     # Assuming detect() can process individual CSVs
+        #     result = detect(split_output, model, top_features, feature_medians)  # Add your actual parameters
+        #     results.append(result)
+            
+        #     # Cleanup split file
+        #     os.remove(split_file)
+    
 def main():
     st.title("Video Processing App")
     
@@ -84,6 +94,8 @@ def main():
         
         # Add a button to process the video
         if st.button("Process Video"):
+            split_output = r"./data/temp/phase_1_splits"
+            clear_directory_contents(split_output)
             st.info(f"Processing video: {video_path}")
             
             split_1, split_2 = split_vid(video_path)
@@ -134,14 +146,16 @@ def main():
             phase_1_csv = phase_1(phase_0_csv)
             print(f"Phase 1 CSV file saved to: {phase_1_csv}")
             
-            phase_1_csv_debugging = r"./data/output/csv_output/phase1_output"
+            split = split_csv_phase1()
             
-            detected_csv= run_phase_2(phase_1_csv_debugging)
+            print(f"Split CSV files saved to: {split}")
+            detected_csv= run_phase_2(split)
             print(f"Detection CSV file saved to: {detected_csv}")
             
             phase_0_frames = merge_annotated_frames(out_a, output_a2)
             print(f"Annotated frames merged successfully: {out_a} + {output_a2}")
             print(f"Saved to : {phase_0_frames} End of phase 0")
+            
             
             # Here you would add your video processing code
             # For example:
