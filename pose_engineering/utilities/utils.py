@@ -3,6 +3,9 @@ import os
 import shutil
 import pandas as pd
 import re
+import subprocess
+from pydub import AudioSegment
+from pydub.generators import Sine
 import math
 
 
@@ -180,7 +183,7 @@ def split_csv_phase1():
         
         # Calculate split parameters (8 seconds = 240 frames @30fps)
         total_frames = len(df)
-        frames_per_split = 70
+        frames_per_split = 10
         num_splits = math.ceil(total_frames / frames_per_split)
         
         # Split the DataFrame
@@ -203,13 +206,18 @@ def split_csv_phase1():
     
     return split_output
 
+
 def create_video_from_frames():
     video_path = r"./data/output/video_output"
     labels_path = r"./data/output/csv_output/phase2_output/detect_results.csv"
     frames_path = r"./data/output/frame_output"
+    video_temp = r"./data/temp/video_temp"
     
     # Create output directory
     os.makedirs(video_path, exist_ok=True)
+    
+    # Create output directory
+    os.makedirs(video_temp, exist_ok=True)
     
     # Load labels data
     labels_df = pd.read_csv(labels_path)
@@ -230,26 +238,27 @@ def create_video_from_frames():
     # Sort frames by ID
     frame_details.sort(key=lambda x: x['frame_id'])
     
-    # Initialize video writers
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video_writer = None
+    # Initialize video parameters
+    fps = 30
+    temp_video_path = os.path.join(video_temp, "temp_vid.mp4")
+    final_video_path = os.path.join(video_path, "final_output.mp4")
     
-    # Get frame dimensions from first frame
+    # Initialize distress tracking
+    distress_segments = []
+    current_distress_start = None
+    
+    # Create video writer
     sample_frame = cv2.imread(os.path.join(frames_path, f"frame_{frame_details[0]['frame_id']}.jpg"))
     height, width, _ = sample_frame.shape
-    
-    # Create writers
-    fps = 30  # Assuming original video FPS
-    video_path = os.path.join(video_path, "vid_output.mp4")
-    
-    video_writer = cv2.VideoWriter(video_path, fourcc, fps, (width, height))
-    
-    # Process frames
-    for detail in frame_details:
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = cv2.VideoWriter(temp_video_path, fourcc, fps, (width, height))
+
+    # Process frames and track distress periods
+    for idx, detail in enumerate(frame_details):
         frame_file = os.path.join(frames_path, f"frame_{detail['frame_id']}.jpg")
         if not os.path.exists(frame_file):
             continue
-            
+
         frame = cv2.imread(frame_file)
         
         # Add annotation
@@ -261,14 +270,62 @@ def create_video_from_frames():
         cv2.putText(frame, f"Prob: {detail['probability']:.2f}", (50, 100),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
         
-
         video_writer.write(frame)
-    
-    # Release resources
+        
+        # Track distress periods for audio
+        if detail['prediction'] == 1:
+            if current_distress_start is None:
+                current_distress_start = idx / fps
+        else:
+            if current_distress_start is not None:
+                distress_segments.append((
+                    current_distress_start,
+                    (idx - 1) / fps
+                ))
+                current_distress_start = None
+                
+    # Add final distress segment if needed
+    if current_distress_start is not None:
+        distress_segments.append((
+            current_distress_start,
+            (len(frame_details) - 1) / fps
+        ))
+
     video_writer.release()
-    
-    print(f"Videos created at: {video_path}")
-    return video_path
+
+    # Create audio with distress beeps
+    total_duration = len(frame_details) / fps
+    audio = AudioSegment.silent(duration=total_duration * 1000)  # Convert to milliseconds
+
+    # Generate beeps for distress periods
+    for start, end in distress_segments:
+        duration = end - start
+        beep = Sine(1000).to_audio_segment(duration=duration * 1000 - 50).append(
+            AudioSegment.silent(50), crossfade=50)
+        audio = audio.overlay(beep, position=start * 1000)
+
+    # Save temporary audio
+    temp_audio_path = os.path.join(video_temp, "temp_audio.wav")
+    audio.export(temp_audio_path, format="wav")
+    print(f"Temporary audio saved to: {temp_audio_path}")
+    print(f"Temporary video saved to: {temp_video_path}")
+    # Combine video and audio using ffmpeg
+    subprocess.run([
+        'ffmpeg', '-y',
+        '-i', temp_video_path,
+        '-i', temp_audio_path,
+        '-c:v', 'copy',
+        '-c:a', 'aac',
+        '-strict', 'experimental',
+        final_video_path
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(f"{final_video_path}")
+    # Cleanup temporary files
+    os.remove(temp_video_path)
+    os.remove(temp_audio_path)
+
+    print(f"Final video with distress alerts created at: {final_video_path}")
+    return final_video_path
 
 def assign_frame_id(csv_file):
     """Reassigns sequential frame numbers starting from 0 in the first column of the CSV."""

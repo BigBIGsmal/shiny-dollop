@@ -26,7 +26,7 @@ def classify_arm_bend(shoulder_x, shoulder_y, elbow_x, elbow_y, wrist_x, wrist_y
     angle = np.degrees(np.arccos(np.clip(cosine_angle, -1.0, 1.0)))
     
     # Classify arm bend status
-    if angle > 160 - threshold1:  # Straight arm
+    if angle > 180 - threshold1:  # Straight arm
         status = "STRAIGHT"
     elif angle > 90 + threshold2:  # Partially bent arm
         status = "PARTIAL_BENT"
@@ -61,9 +61,10 @@ def phase_1(csv_file_path):
         # Create features dataframe
         features_df = pd.DataFrame()
         features_df['frame'] = data.index
+        
+        features_df['duration_seconds'] = len(features_df) / 15
 
         # ANALYZE ARM BENDS
-                # ANALYZE ARM BENDS
         features_df['Left_arm_status'] = data.apply(
             lambda row: classify_arm_bend(
                 row['L_shoulder_x'], row['L_shoulder_y'],

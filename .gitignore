@@ -5,6 +5,7 @@ __pycache__/
 
 /pose_engineering/dabest.pt
 /pose_engineering/distress_detection_model_full_FEATURE_SELECTED_V2.pkl
+/pose_engineering/WITHDURATION_XGBOOST_MODEL.pkl
 /pose_engineering/data/input/
 /pose_engineering/data/output/
 /pose_engineering/data/output/phase2_output

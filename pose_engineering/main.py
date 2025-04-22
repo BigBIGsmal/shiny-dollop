@@ -11,6 +11,13 @@ from ultralytics import YOLO
 import joblib
 
 
+import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
+
  # Change if needed
 
 
@@ -37,7 +44,7 @@ def run_phase_0(input_dir, results):
     results.extend([annotated_path, csv_path])
                 
 def run_phase_2(input_dir):
-    model_path = r'distress_detection_model_full_FEATURE_SELECTED_V2.pkl'
+    model_path = r'WITHDURATION_XGBOOST_MODEL.pkl'
     
     artifacts = joblib.load(model_path)
     
@@ -46,16 +53,6 @@ def run_phase_2(input_dir):
     feature_medians = artifacts['feature_medians']
     
     detect(input_dir, model, top_features, feature_medians)
-    
-        #     # Process splits
-        # results = []
-        # for split_file in split_files:
-        #     # Assuming detect() can process individual CSVs
-        #     result = detect(split_output, model, top_features, feature_medians)  # Add your actual parameters
-        #     results.append(result)
-            
-        #     # Cleanup split file
-        #     os.remove(split_file)
     
 def main():
     st.title("Video Processing App")
@@ -85,19 +82,24 @@ def main():
     
     # Display the selected video
     if selected_video:
-        
         print(f"Selected video: {selected_video}")
         video_path = os.path.join(video_dir, selected_video)
-        
         print(f"Video path: {video_path}")
-        st.video(video_path)
+        
+        # Option 1: Show first frame as static preview
+        cap = cv2.VideoCapture(video_path)
+        success, frame = cap.read()
+        if success:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            st.image(frame)
+        cap.release()
         
         # Add a button to process the video
         if st.button("Process Video"):
-            # split_output = r"./data/temp/phase_1_splits"
+            split_output = r"./data/temp/phase_1_splits"
+            clear_directory_contents(split_output)
             # frame_output = r"./data/output/frame_output"
             # clear_directory_contents(frame_output)
-            # clear_directory_contents(split_output)
             # st.info(f"Processing video: {video_path}")
             
             # split_1, split_2 = split_vid(video_path)
@@ -148,17 +150,21 @@ def main():
             # phase_1_csv = phase_1(phase_0_csv)
             # print(f"Phase 1 CSV file saved to: {phase_1_csv}")
             
-            # split = split_csv_phase1()
+            split = split_csv_phase1()
             
-            # print(f"Split CSV files saved to: {split}")
-            # detected_csv= run_phase_2(split)
-            # print(f"Detection CSV file saved to: {detected_csv}")
+            print(f"Split CSV files saved to: {split}")
+            detected_csv= run_phase_2(split)
+            print(f"Detection CSV file saved to: {detected_csv}")
             
             # phase_0_frames = merge_annotated_frames(out_a, output_a2)
             # print(f"Annotated frames merged successfully: {out_a} + {output_a2}")
             # print(f"Saved to : {phase_0_frames} End of phase 0")
             
             create_video_from_frames()
+            
+            video_path = r"./data/output/video_output/final_output.mp4"
+            if os.path.exists(video_path):
+                 st.video(video_path)
             # Here you would add your video processing code
             # For example:
             # process_video(video_path)
